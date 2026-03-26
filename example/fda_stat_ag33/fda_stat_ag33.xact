@@ -1,0 +1,417 @@
+config {
+    out_dir: "out";
+    out_ft: "csv";
+    audit: true; // set true for audit file
+    write_all_vtables: false; // set true to output vtables
+}
+
+input extract {
+    columns: {
+        Plancode <string>;
+        'Policy ID'n <string>; 
+        'Iss Age'n <int>;
+        'Iss Day'n <int>;
+        'Iss Month'n <int>;
+        'Iss Year'n <int>; 
+        Sex <string>; 
+        'Current Guarantee Fund 1 Value'n <float>; 
+        'Fund Value At Policy Year Start'n <float>;
+        'Guarantee Duration'n <int>;
+        Company <string>;
+        'Minimum Guaranteed Rate'n <float>;
+        'Current Rate'n <float>;
+    }
+}
+
+input plan_code_values {
+    columns: {
+        "Plan Code" <string>;
+        "Gtd Period Init" <int>;
+        "Gtd Period Subs" <int>;
+        "Window Month" <int>;
+        "Yr2+ Guarantees" <bool>;
+        "Has MVA" <bool>;
+        "SC Header" <string>;
+        "Maturity Age" <int>;
+        "Full Surrender after SC" <bool>;
+        "CSV Rate Key" <string>;
+        "DB Rate Key" <string>; 
+        "Az Rate Key" <string>;
+    }
+}
+
+input non_elect_decrement_rates {
+    columns: {
+        attained_age <int>;
+        annual_mort_rate_m <float>;
+        annual_mort_rate_f <float>;
+        annual_disability_rate <float>;
+        m_nh_rate_per_100 <float>; 
+        f_nh_rate_per_100 <float>;
+        m_nh_cont_rate_60day <float>;
+        f_nh_cont_rate_60day <float>;
+    }
+}
+
+input stat_discount_rates {
+    columns: {
+        "Issue_Year" <int>;
+        "Cash_Settlements" <bool>;
+        "Guarantees" <bool>;
+        "Guar_Duration" <string>;
+        "Guar_Duration_Lower" <int>;
+        "Guar_Duration_Upper" <int>;
+        "Type" <string>;
+        "Key" <string>;
+        "Rate_%" <float>;
+    }
+}
+
+table surrender_charge_schedule {
+    nrows: 11;
+    columns: {
+        policy_year <int>: t; 
+        surr_charge_percent<int>: [8, 8, 8, 7, 6, 5, 4, 3, 2, 1, 0];
+    }
+}
+
+table values {
+    nrows: 1;
+    columns: {
+        val_date <date>: $date(2024, 9, 30);
+        min_guar_annuitization_rate <float>: .015;
+        min_annuitization_years <int>: 5;
+        A_eq_ax_using_gtd_ann <float>: (
+            1 - (1 + self.min_guar_annuitization_rate[t])^(-self.min_annuitization_years[t])
+        ) / self.min_guar_annuitization_rate[t];
+        len_of_py_assump_by_pol <int>: 21;
+        policy_proj_to_test <int>: 0;
+    }
+}
+
+table policy_metadata {
+    nrows: extract;
+    columns: {
+        policy_number <string>: extract."Policy ID"[t];
+        issue_date <date>: $date(
+            extract."Iss Year"[t],
+            extract."Iss Month"[t],
+            extract."Iss Day"[t]
+        );
+        policy_month_fraction <float>: $days360(self.issue_date[t], values.val_date[0]) / 30.0;
+        policy_month_at_val <int>: $if( self.policy_month_fraction[t] >= 0,
+            $ceiling( self.policy_month_fraction[t] ), 
+            $floor( self.policy_month_fraction[t] ), 
+        );
+
+        month_in_policy_year_at_val <int>: $if(
+            $mod(self.policy_month_at_val[t], 12) == 0,
+                12,
+                $mod(self.policy_month_at_val[t], 12)
+        );
+        policy_year_at_val <int>: $ceiling(self.policy_month_at_val[t] / 12);
+        window_month <int>: $lookup(
+            plan_code_values."Window Month"[:],
+            plan_code_values."Plan Code"[:] == extract.Plancode[t]
+        );
+        maturity_age <int>: $lookup(
+            plan_code_values."Maturity Age"[:],
+            plan_code_values."Plan Code"[:] == extract.Plancode[t]
+        );
+        guarantee_rate_period <int>: $lookup(
+            plan_code_values."Gtd Period Init"[:],
+            plan_code_values."Plan Code"[:] == extract.Plancode[t]
+        );
+
+        csv_val_disc_rate <float>: $lookup(
+            stat_discount_rates."Rate_%"[:],
+            stat_discount_rates.Issue_Year[:] == extract."Iss Year"[t]
+            ,stat_discount_rates.Cash_Settlements[:] == true // suggestion: move to plan code map
+            ,stat_discount_rates.Guarantees[:] == false // suggestion: move to plan code map
+            ,stat_discount_rates.Guar_Duration_Lower[:] < 0
+            ,stat_discount_rates.Guar_Duration_Upper[:] >= 5
+            ,stat_discount_rates.Type[:] == "B"
+        ) / 100.0;
+
+        non_elect_val_disc_rate <float>: $lookup(
+            stat_discount_rates."Rate_%"[:],
+            stat_discount_rates.Issue_Year[:] == extract."Iss Year"[t]
+            ,stat_discount_rates.Cash_Settlements[:] == true // suggestion: move to plan code map
+            ,stat_discount_rates.Guarantees[:] == false // suggestion: move to plan code map            
+            ,stat_discount_rates.Guar_Duration_Lower[:] < 0
+            ,stat_discount_rates.Guar_Duration_Upper[:] >= 5
+            ,stat_discount_rates.Type[:] == "A"
+        ) / 100.0;
+    }
+}
+
+vtable py_assumptions_by_pol {
+  nrows: 21;
+  columns: {
+    policy_year <int>: t + 1;
+    val_annuitization_discount_rate <float>: $lookup(
+      stat_discount_rates.'Rate_%'n[:],
+        stat_discount_rates.Issue_Year[:] == extract."Iss Year"[t1]
+        ,stat_discount_rates.Cash_Settlements[:] == true 
+        ,stat_discount_rates.Guarantees[:] == false 
+        ,stat_discount_rates.Guar_Duration_Lower[:] < $max(
+            self.policy_year[t], 
+            extract.'Guarantee Duration'n[t1]
+        )
+        ,stat_discount_rates.Guar_Duration_Upper[:] >= $max(
+            self.policy_year[t], 
+            extract.'Guarantee Duration'n[t1]
+        )
+        ,stat_discount_rates.Type[:] == "A"
+    ) / 100;
+  }
+}
+
+vtable time {
+    nrows: 1001;
+    columns: {
+
+        policy_month <int>: $if( t == 0, 
+            policy_metadata.policy_month_at_val[t1],
+            self.policy_month[$if( t == 0, 0, t-1)] + 1
+        );
+
+        month_in_policy_year <int>: $if( t == 0, 
+            policy_metadata.month_in_policy_year_at_val[t1],
+            $mod(self.month_in_policy_year[$if( t == 0, 0, t-1)], 12) + 1
+        );
+        policy_year <int>: $if( t == 0,
+            policy_metadata.policy_year_at_val[t1],
+            self.policy_year[$if( t == 0, 0, t-1)] 
+            + (self.month_in_policy_year[$if( t == 0, 0, t-1)] == 12)
+        );
+        attained_age <int>: extract."Iss Age"[t1] + self.policy_year[t] - 1;
+
+        // Indicators
+        is_end_of_policy_year <bool>: self.month_in_policy_year[t] == 12;
+        is_window_month <bool>: policy_metadata.window_month[t1] == self.policy_month[t];
+        isnt_matured <bool>: self.attained_age[t] < policy_metadata.maturity_age[t1];
+
+        // Contract Rates
+        days_interest <int>: $if( t == 0, extract."Iss Day"[t1], 30 );
+        cumulative_days <int>: self.days_interest[t] 
+            + $if( t > 0, self.cumulative_days[$if( t == 0, 0, t-1)], 0);
+        credited_rate_annual <float>: 
+            $if( 
+                $or(
+                    self.policy_year[t] <= policy_metadata.guarantee_rate_period[t1], 
+                    self.policy_year[t] == policy_metadata.policy_year_at_val[t1]
+                ), 
+                    extract."Current Rate"[t1], 
+                    extract."Minimum Guaranteed Rate"[t1]
+            );
+
+
+        capped_policy_year <int>: $min(
+            $rows(surrender_charge_schedule.surr_charge_percent[:]) - 1, 
+            self.policy_year[t] - 1
+        );
+
+        surr_charge_rate <float>: surrender_charge_schedule.surr_charge_percent[
+            self.capped_policy_year[t]
+        ] / 100 * $if(self.is_window_month[t], 0, 1);
+        
+        // Decrement Rates
+        capped_attained_age <int>: $min(
+            $rows(non_elect_decrement_rates.annual_mort_rate_m[:]) - 1, 
+            self.attained_age[t]
+        );
+
+        annual_mort_rate <float>: $if( extract.Sex[t1] == "M",
+            non_elect_decrement_rates.annual_mort_rate_m[
+                self.capped_attained_age[t]
+            ],
+            non_elect_decrement_rates.annual_mort_rate_f[
+                self.capped_attained_age[t]
+            ]
+        );
+        annual_disability_rate <float>: non_elect_decrement_rates.annual_disability_rate[
+            self.capped_attained_age[t]
+        ];
+
+        annual_nh_rate <float>: $if(
+            extract.Sex[t1] == "M",
+            non_elect_decrement_rates.m_nh_rate_per_100[self.capped_attained_age[t]],
+            non_elect_decrement_rates.f_nh_rate_per_100[self.capped_attained_age[t]]
+        ) / 100;
+        annual_nh_cont_rate <float>: $if(
+            extract.Sex[t1] == "M",
+            non_elect_decrement_rates.m_nh_cont_rate_60day[self.capped_attained_age[t]],
+            non_elect_decrement_rates.f_nh_cont_rate_60day[self.capped_attained_age[t]]
+        );
+
+        // Lives Inforce
+
+
+        lives_bom <float>: $if( t == 0 , 1, self.lives_eom[$max(t-1,0)] * self.isnt_matured[t]);
+        q_nonelect_annual <float>: 1 - (
+            ( 1 - self.annual_mort_rate[t] )
+            * ( 1 - self.annual_disability_rate[t] )
+            * ( 1 - self.annual_nh_rate[t] * self.annual_nh_cont_rate[t] )
+        );
+        q_nonelect_monthly <float>: 1 - (
+            1 - self.q_nonelect_annual[t]
+        ) ^ ( self.days_interest[t] / 30 / 12 );
+        d_nonelect_monthly <float>: self.lives_bom[t] * self.q_nonelect_monthly[t];
+        lives_eom <float>: self.lives_bom[t] - self.d_nonelect_monthly[t];
+
+        // Annuitization Benefit
+        capped_policy_year_by_pol <int>: $min(20, self.policy_year[t] - 1);
+        annuitization_val_rate <float>: 
+            carvm.py_assumptions_by_pol.val_annuitization_discount_rate[
+                self.capped_policy_year_by_pol[t], t1
+            ];
+
+        B_eq_ax_using_val_rate <float>: (
+            1 - ( 1 + self.annuitization_val_rate[t] ) ^ (-values.min_annuitization_years[0])
+        ) / self.annuitization_val_rate[t];
+
+        PV_1_dollar_ann_benefit <float>: (
+            self.B_eq_ax_using_val_rate[t] / values.A_eq_ax_using_gtd_ann[0]
+        );
+
+    }
+}
+
+vtable projection {
+    nrows: 1001;
+    columns: {
+        policy_month <int> : carvm.time.policy_month[t, t2];
+
+        // AV Rollforward
+        av_bom <float>: $if( 
+            t == 0,
+                extract.'Fund Value At Policy Year Start'n[t2],
+                self.av_eom[$max(t-1, 0)]
+        );
+        premiums <float>: 0;
+        charges <float>: 0;
+        av_for_interest <float>: self.av_bom[t] + self.premiums[t] - self.charges[t];
+        crediting_factor <float>: (
+            1 + carvm.time.credited_rate_annual[t, t2]
+        ) ^ (carvm.time.days_interest[t, t2] / 30 / 12);
+
+        interest <float>: self.av_for_interest[t] * (self.crediting_factor[t] - 1);
+        av_halfway <float>: self.av_for_interest[t] * (self.crediting_factor[t] ^ ( 1/2 ));
+        av_before_pwd <float>: self.av_for_interest[t] + self.interest[t];
+
+        free_wd_amount <float>: $if( t == 0,
+            $if(
+                carvm.time.surr_charge_rate[t, t2] == 0,
+                    self.av_before_pwd[t],
+                    .1 * extract.'Fund Value At Policy Year Start'n[t2]
+            ),
+            $if ( 
+                (carvm.time.surr_charge_rate[t, t2] == 0) * $if(carvm.time.is_window_month[t, t2], 0, 1),
+                    self.av_before_pwd[t],
+                    (
+                        $if(
+                            carvm.time.is_end_of_policy_year[$max(t-1, 0), t2],
+                                .1 * self.av_bom[t],
+                                self.free_wd_amount[$max(t-1,0)] - self.free_wd_taken[$max(t-1,0)]
+                        )
+                    )
+            )
+          );        
+
+        free_wd_taken <float>: t1 * self.free_wd_amount[t] * carvm.time.is_end_of_policy_year[t, t2];
+        av_eom <float>: self.av_before_pwd[t] - self.free_wd_taken[t];
+
+        // CSV
+        rop_amount <float>: 0;
+        surr_charge <float>: carvm.time.surr_charge_rate[t, t2] * (
+            self.av_before_pwd[t] * ( 
+                1 - t1 * .1 * carvm.time.is_end_of_policy_year[t, t2]
+            ) 
+            - self.free_wd_amount[t]
+        );
+        csv_eom <float>: $max(self.rop_amount[t], self.av_eom[t] - self.surr_charge[t]);
+
+        // Benefits
+        non_elective_benefit <float>: self.av_halfway[t] * carvm.time.d_nonelect_monthly[t, t2];
+        decremented_csv <float>: carvm.time.lives_eom[t, t2] * self.csv_eom[t];
+        decremented_pwd <float>: self.free_wd_taken[t] * carvm.time.lives_eom[t, t2];
+        decremented_ann_benefit <float>: self.av_eom[t] 
+            * carvm.time.lives_eom[t, t2] 
+            * carvm.time.PV_1_dollar_ann_benefit[t, t2];
+
+
+        // Discount Factors
+        non_elect_disc_factor <float>: (
+          1 + policy_metadata.non_elect_val_disc_rate[t2]
+        )^( -(
+            carvm.time.days_interest[t, t2] / 2 + $if( 
+                t == 0, 0, carvm.time.cumulative_days[$max(t-1, 0), t2])
+            ) / 30 / 12
+        );
+        csv_disc_factor <float>: (
+            1 + policy_metadata.csv_val_disc_rate[t2]
+        )^( -carvm.time.cumulative_days[t, t2] / 30 / 12 );
+        ann_disc_factor <float>: (
+            (1 + carvm.time.annuitization_val_rate[t, t2])^(-carvm.time.cumulative_days[t,t2] / 360)
+        );
+
+        // Benefit PV's at val rate
+        av_bom_is_nonzero <bool>: (self.av_bom[t] > 0);
+        policy_isnt_matured <bool>: carvm.time.isnt_matured[t, t2];
+
+        cumulative_pv_non_elect_ben <float>: 
+            carvm.time.isnt_matured[t, t2] 
+                * (self.av_bom[t] > 0) 
+                * (
+                    self.non_elective_benefit[t] 
+                    * self.non_elect_disc_factor[t] 
+                    + $if(t == 0, 0, self.cumulative_pv_non_elect_ben[$max(t-1, 0)])
+                );
+
+        pv_csv <float>: self.csv_eom[t] * carvm.time.lives_eom[t, t2] * self.csv_disc_factor[t];
+        cumulative_pv_pwd <float>: 
+            $if( 
+                t > 0, 
+                (
+                    self.csv_disc_factor[t] 
+                    * self.decremented_pwd[t] 
+                    + self.cumulative_pv_pwd[$max(t-1, 0)]
+                ) * (self.av_bom[t] > 0),
+                0
+            );
+        pv_ann <float>: self.decremented_ann_benefit[t] * self.ann_disc_factor[t];
+        pv_benefit <float>: 
+            $if( 
+                $or(
+                    (policy_metadata.window_month[t2] > 120) *
+                    (carvm.time.is_end_of_policy_year[t, t2]), 
+
+                    policy_metadata.window_month[t2] <= 120
+                ),
+
+                self.cumulative_pv_non_elect_ben[t] 
+                + $max(self.pv_csv[t], self.pv_ann[t]) 
+                + self.cumulative_pv_pwd[t], 
+                0
+            );
+    }
+}
+
+vtable wd_paths {
+    nrows: 2;
+	vtable: { source: projection; }
+}
+
+table carvm {
+    nrows: extract;
+	vtable: { source: py_assumptions_by_pol; }
+	vtable: { source: time; }
+	vtable: { source: wd_paths; }
+    columns: {
+        policy_number <string>: extract."Policy ID"[t];
+        max_pv_no_wd <float>: $max_range(carvm.wd_paths.projection.pv_benefit[:, 0, t]);
+        max_pv_free_wd <float>: $max_range(carvm.wd_paths.projection.pv_benefit[:, 1, t]);
+        carvm_reserve <float>: $max(self.max_pv_no_wd[t], self.max_pv_free_wd[t]);
+    }
+}

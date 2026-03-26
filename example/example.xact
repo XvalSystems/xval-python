@@ -1,0 +1,10 @@
+config {
+    out_ft: "term";
+}
+
+table hello {
+    nrows: 1;
+    columns: {
+        greeting <string>: "Hello, World!";
+    }
+}

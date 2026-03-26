@@ -1,0 +1,1 @@
+(venv) d:\Xval\xval-sdk -m build --wheel -C "--plat-name win_amd64"

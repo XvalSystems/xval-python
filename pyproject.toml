@@ -1,31 +1,31 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=71"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "xval"
-version = "0.0.7"
-description = "Xval's Python SDK and CLI"
+version = "0.1.0"
+description = "Xval's Python SDK"
 authors = [
-  {name = "Timothy Quast", email = "timothy.quast@xval.io"}
+    {name = "Timothy Quast", email = "timothy.quast@xval.io"}
 ]
-license = {text = "MIT"}
+license = "MIT"
 readme = "README.md"
 keywords = ["xval", "xact", "actuary", "actuarial", "valuation"]
 classifiers = [
-  "Programming Language :: Python :: 3",
-  "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
 ]
-dynamic = ["dependencies"]
-
-[project.scripts]
-xval = "xval.cli:cli"
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
 pythonpath = [
-  "src"
+    "src"
 ]
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+[tool.setuptools.package-data]
+xval = ["*.dll"]
+
+[project.urls]
+Homepage = "https://xval.io"
+Repository = "https://github.com/XvalSystems/xval-sdk"

@@ -1,39 +1,23 @@
 """
-xval - Xval's Python SDK and CLI
+xval - Xval's Python SDK
 """
 
 import importlib.metadata
+ 
+VERSION = "v0.1.0"
+__version__ = VERSION
 
-__version__ = importlib.metadata.version("xval")
-
-from typing import Literal
-import xval.api as api
-
-# Re-export all SDK functions to maintain backward compatibility
-from .sdk import (
-    retrieve,
-    list_,
-    delete,
-    switch_to_env,
-    start,
-    init,
-    audit,
-    list_audits,
-    clone,
-    update,
+from .xval import (
+    run,
+    template,
+    TEMPLATE_LIST,
 )
 
 __all__ = [
-    'retrieve',
-    'list_',
-    'delete',
-    'switch_to_env',
-    'start',
-    'init',
-    'audit',
-    'list_audits',
-    'clone',
-    'update',
+    'run',
+    'template',
+    'TEMPLATE_LIST',
+    'VERSION',
 ]
 
 

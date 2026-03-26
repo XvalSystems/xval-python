@@ -1,0 +1,23 @@
+Plan Code,Gtd Period Init,Gtd Period Subs,Window Month,Yr2+ Guarantees,Has MVA,SC Header,Maturity Age,Full Surrender after SC,CSV Rate Key,DB Rate Key,Az Rate Key
+MGDA03,3,1,37,False,True,MGDA*,100,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MGDA04,4,1,49,False,True,MGDA*,100,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MGDA05,5,1,61,False,True,MGDA*,100,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MGDA06,6,1,73,False,True,MGDA*,100,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MGDA07,7,1,85,False,True,MGDA*,100,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MGDA08,8,1,97,False,True,MGDA*,100,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MGDA09,9,1,109,False,True,MGDA*,100,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MGDA10,10,1,121,False,True,MGDA*,100,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MY3NY,3,1,37,False,False,MY*NY,100,True,[Year]_TRUE_FALSE_[GuarYrs]_C,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MY4NY,4,1,49,False,False,MY*NY,100,True,[Year]_TRUE_FALSE_[GuarYrs]_C,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MY5NY,5,1,61,False,False,MY*NY,100,True,[Year]_TRUE_FALSE_[GuarYrs]_C,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MY6NY,6,1,73,False,False,MY*NY,100,True,[Year]_TRUE_FALSE_[GuarYrs]_C,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MY7NY,7,1,85,False,False,MY*NY,100,True,[Year]_TRUE_FALSE_[GuarYrs]_C,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MY10NY,10,1,121,False,False,MY*NY,100,True,[Year]_TRUE_FALSE_[GuarYrs]_C,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MYG5,5,1,999,False,True,MYG*,96,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+MYG6,6,1,999,False,True,MYG*,96,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+CENT01,1,1,999,False,True,CENT01,121,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+CENT07,7,1,999,False,True,CENT07,121,True,[Year]_TRUE_FALSE_[GuarYrs]_B,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+WQC5,5,1,999,False,False,WQC512,95,False,[Year]_TRUE_FALSE_[GuarYrs]_C,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
+GUFDA,0,1,999,True,False,GUFDA,121,True,[Year]_TRUE_TRUE_[GuarYrs]_C,[Year]_TRUE_TRUE_[GuarYrs]_A,[Year]_TRUE_TRUE_[GuarYrs]_A
+WQC712,2,1,999,True,False,WQC712,95,False,[Year]_TRUE_TRUE_[GuarYrs]_C,[Year]_TRUE_TRUE_[GuarYrs]_A,[Year]_TRUE_TRUE_[GuarYrs]_A
+WQC512,2,1,999,False,False,WQC512,95,False,[Year]_TRUE_FALSE_[GuarYrs]_C,[Year]_TRUE_FALSE_[GuarYrs]_A,[Year]_TRUE_FALSE_[GuarYrs]_A
