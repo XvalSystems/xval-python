@@ -3,8 +3,8 @@ xval - Xval's Python SDK
 """
 
 import importlib.metadata
- 
-VERSION = "v0.1.0"
+
+VERSION = "v0.1.2"
 __version__ = VERSION
 
 from .xval import (
