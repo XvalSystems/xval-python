@@ -40,7 +40,8 @@ lib.template.restype = None
 
 
 TEMPLATE_LIST = [
-    "fda_stat_ag33"
+    "fda_stat_ag33",
+    "spia_projection",
 ]
 
 def run(
@@ -102,11 +103,6 @@ def run(
         OutputFileType.XLSX if out_ft is None else out_ft,
     )
     os.chdir(original_cwd)
-
-
-TEMPLATE_LIST = [
-    "fda_stat_ag33"
-]
 
 
 def template(
